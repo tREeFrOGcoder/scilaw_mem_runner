@@ -1,0 +1,14 @@
+你现在在一个标注 package 目录里,里面有三个纯 JSON:items_mem.json / items_ss.json / items_sv.json,以及三个待填 CSV:mem_responses.csv / ss_responses.csv / sv_responses.csv。
+
+任务:开 3 个 subagent(每个用 sonnet5 或更强),一堆一个,并行跑。每个 subagent 读自己那份 items_{pile}.json,对里面全部 item 逐一判定,把答案和一句中文理由写进对应 CSV。三堆互相独立,分别写各自的 CSV,不冲突。Write 工具允许 subagent 使用。
+
+每份 JSON 自带 instructions、rules(判定规则,以它为准)、answer_column、answer_values、key_columns。所有代码都 inline 在每个 item 的 panes[].code 里——禁止打开任何 per-item .py 文件。
+
+三堆分别看什么:
+- mem:每题 panes 里 role=gt 是 REFERENCE(已发表公式),role=out 是 CANDIDATE(模型凭记忆写的)。判两者是否同一函数形式,答案 v = same / different(数字↔自由系数算同形;只有指数/项数/函数族不同才算 different;看形,不跑代码)。按 item_id 写进 mem_responses.csv 的 v + why。
+- ss:role=gt 是隐藏真值机制,role=out 是提交。判提交还原了多少真值结构,答案 score ∈ {0,0.25,0.5,0.75,1}。按 item_id 写进 ss_responses.csv 的 score + why。
+- sv:role=out 是提交,每题有多条 rubric(questions 里的 rubric_1..N),逐条判 Y/N。行为类直接读该 item 的 probe_output(单调/符号/极限/可分离性等已跑好,不用跑代码),结构类读 submission。按 item_id + rubric 写进 sv_responses.csv 的 answer + why(一条 rubric 一行)。
+
+写入要求:每一行都要填、不留空;答案只用 answer_values 里的合法值;why 用中文、一句话、极短,说清为什么这么判;expert 列填标注者名(用该 subagent 的模型名)。
+
+收尾:你作为 orchestrator 核对三个 CSV——行数对、取值合法、无空,然后简短报告完成情况。
